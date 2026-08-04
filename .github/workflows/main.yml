@@ -1,0 +1,32 @@
+
+name: Deploy Qshopn Backend
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🛑 Stop & Remove Old Container
+        run: |
+          docker stop qshopn-container || true
+          docker rm qshopn-container || true
+
+      - name: 🧹 Remove Old Image
+        run: |
+          docker rmi qshopn_backend || true
+
+      - name: 🐳 Build New Image
+        run: |
+          docker build -t qshopn_backend .
+
+      - name: 🚀 Run Container
+        run: |
+            docker run -d   --restart always   -p 8099:8080   --name qshopn-container   --env-file /home/Kishor/app/dharan/backend/.env  qshopn_backend
