@@ -114,12 +114,9 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ✅ USE PATTERNS FOR WILDCARDS
+        // ✅ USE PATTERNS FOR WILDCARDS (Allows mobile devices, local IPs, Vercel, Render, and custom domains)
         configuration.setAllowedOriginPatterns(List.of(
-                "https://*.qshopn.com",
-                "https://qshopn.com",
-                "http://localhost:5173",
-                "http://localhost:3000"
+                "*"
         ));
 
         configuration.setAllowCredentials(true);
