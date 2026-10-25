@@ -16,6 +16,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 
 @Configuration
@@ -66,7 +67,24 @@ public class SecurityConfig {
 
                         .anyRequest().permitAll()
                 )
-
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            String msg = "Authentication required to access this resource";
+                            request.setAttribute("ERROR_MESSAGE", msg);
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + msg + "\",\"status\":401}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            String msg = "You do not have permission to access this resource";
+                            request.setAttribute("ERROR_MESSAGE", msg);
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+                            response.getWriter().write("{\"error\":\"Forbidden\",\"message\":\"" + msg + "\",\"status\":403}");
+                        })
+                )
 
                 .addFilterBefore(jwtTokenValidator(), BasicAuthenticationFilter.class);
 

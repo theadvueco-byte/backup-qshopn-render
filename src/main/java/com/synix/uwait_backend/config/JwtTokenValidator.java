@@ -95,7 +95,12 @@ public class JwtTokenValidator extends OncePerRequestFilter {
 
 
         } catch (Exception e) {
+            String msg = "Invalid or expired authentication token";
+            request.setAttribute("ERROR_MESSAGE", msg);
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + msg + "\",\"status\":401}");
             return;
         }
 
