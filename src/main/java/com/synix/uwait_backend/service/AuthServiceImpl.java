@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -124,32 +125,47 @@ public class AuthServiceImpl implements AuthService{
 
         String email = authentication.getName();
 
-        User user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        Optional<User> userOpt = userRepo.findByEmail(email);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            UserMeResponse res = new UserMeResponse();
+            res.setId(user.getId());
+            res.setFullName(user.getFullName());
+            res.setEmail(user.getEmail().trim().toLowerCase());
+            res.setRole(user.getRole().name());
+            res.setEmailVerified(user.isEnabled());
 
-        UserMeResponse res = new UserMeResponse();
-        res.setId(user.getId());
-        res.setFullName(user.getFullName());
-        res.setEmail(user.getEmail().trim().toLowerCase());
-        res.setRole(user.getRole().name());
-        res.setEmailVerified(user.isEnabled());
+            // 🔥 Fetch shops
+            List<Shop> shops = shopRepository.findAllByOwner(user);
 
-        // 🔥 Fetch shops
-        List<Shop> shops = shopRepository.findAllByOwner(user);
+            List<ShopSummaryResponse> shopResponses = shops.stream()
+                    .map(shop -> {
+                        ShopSummaryResponse s = new ShopSummaryResponse();
+                        s.setId(shop.getPublicCode());
+                        s.setName(shop.getShopName());
+                        s.setStatus(shop.getStatus().name());
+                        return s;
+                    })
+                    .toList();
 
-        List<ShopSummaryResponse> shopResponses = shops.stream()
-                .map(shop -> {
-                    ShopSummaryResponse s = new ShopSummaryResponse();
-                    s.setId(shop.getPublicCode());
-                    s.setName(shop.getShopName());
-                    s.setStatus(shop.getStatus().name());
-                    return s;
-                })
-                .toList();
+            res.setShops(shopResponses);
+            return res;
+        }
 
-        res.setShops(shopResponses);
+        Optional<Admin> adminOpt = adminRepo.findByEmail(email);
+        if (adminOpt.isPresent()) {
+            Admin admin = adminOpt.get();
+            UserMeResponse res = new UserMeResponse();
+            res.setId(admin.getId());
+            res.setFullName(admin.getFullName());
+            res.setEmail(admin.getEmail().trim().toLowerCase());
+            res.setRole(admin.getRole().name());
+            res.setEmailVerified(true);
+            res.setShops(List.of());
+            return res;
+        }
 
-        return res;
+        throw new RuntimeException("User not found");
     }
 
 
