@@ -5,7 +5,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.mail.MailException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -185,8 +187,26 @@ public class GlobalExceptionHandler {
                 "Operation failed due to database constraint (e.g. duplicate record or foreign key conflict)", request, null);
     }
 
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<?> handleDataAccessException(DataAccessException ex, HttpServletRequest request) {
+        log.error("Database access error at URI {}: ", request.getRequestURI(), ex);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error",
+                "A database error occurred while processing your request. Please try again later.", request, null);
+    }
+
     // ==========================================
-    // 8. General Argument & State Errors (400)
+    // 8. Mail & External Service Exceptions (503)
+    // ==========================================
+
+    @ExceptionHandler(MailException.class)
+    public ResponseEntity<?> handleMailException(MailException ex, HttpServletRequest request) {
+        log.error("Email delivery failure at URI {}: ", request.getRequestURI(), ex);
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable",
+                "Email delivery service is temporarily unavailable. Please try again later.", request, null);
+    }
+
+    // ==========================================
+    // 9. General Argument & State Errors (400)
     // ==========================================
 
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
@@ -195,13 +215,24 @@ public class GlobalExceptionHandler {
     }
 
     // ==========================================
-    // 9. Application Runtime Exceptions
+    // 10. Application Runtime Exceptions
     // ==========================================
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntime(RuntimeException ex, HttpServletRequest request) {
         String message = ex.getMessage() != null ? ex.getMessage() : "Bad request error";
         String lower = message.toLowerCase();
+
+        // 🛡️ Guard against leaking technical/infrastructure exception traces to users
+        if (lower.contains("mailconnectexception") || lower.contains("sockettimeoutexception")
+                || lower.contains("connection refused") || lower.contains("connection timed out")
+                || lower.contains("couldn't connect to host") || lower.contains("broken pipe")
+                || lower.contains("nullpointerexception") || lower.contains("sqlexception")
+                || lower.contains("org.eclipse.angus") || lower.contains("org.springframework")) {
+            log.error("Internal service failure caught in RuntimeException at URI {}: ", request.getRequestURI(), ex);
+            return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable",
+                    "Email delivery or dependent service is temporarily unavailable. Please try again shortly.", request, null);
+        }
 
         // Categorize by common domain messages
         if (lower.contains("not found")) {

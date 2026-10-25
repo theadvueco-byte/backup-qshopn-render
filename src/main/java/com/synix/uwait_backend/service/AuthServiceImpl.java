@@ -9,8 +9,6 @@ import com.synix.uwait_backend.repository.ShopRepository;
 import com.synix.uwait_backend.repository.UserRepository;
 import com.synix.uwait_backend.service.emailsend.EmailService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,7 +31,7 @@ public class AuthServiceImpl implements AuthService{
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
-    private final JavaMailSender mailSender;
+    private final EmailNotificationService emailNotificationService;
     private static final String OTP_CHARS = "0123456789";
 
     @Override
@@ -92,28 +90,26 @@ public class AuthServiceImpl implements AuthService{
     }
 
 // directly send email without using email service
-// interface since we need to send a custom formatted email for otp verification
+// Directly send email using SendGrid template, with plain text fallback
     private void sendOtpEmail(String toEmail, String otp) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("theadvue@qshopn.com");
-        message.setTo(toEmail);
-        message.setSubject("OTP Verification Code – Qshopn");
-
-        message.setText(
-                "Dear User,\n\n" +
-                        "Thank you for registering with Qshopn.\n\n" +
-                        "Your One-Time Password (OTP) for verification is:\n\n" +
-                        "OTP: " + otp + "\n\n" +
-                        "This OTP is valid for 5 minutes only.\n" +
-                        "Please do not share this code with anyone for security reasons.\n\n" +
-                        "If you did not request this verification, please ignore this email.\n\n" +
-                        "Warm regards,\n" +
-                        "TheAdvue Qshopn Team\n" +
-                        "Secure. Reliable. Simple."
-        );
-
-
-        mailSender.send(message);
+        try {
+            emailService.sendOtp(toEmail, otp);
+        } catch (Exception e) {
+            emailNotificationService.sendMail(
+                    toEmail,
+                    "OTP Verification Code – Qshopn",
+                    "Dear User,\n\n" +
+                            "Thank you for registering with Qshopn.\n\n" +
+                            "Your One-Time Password (OTP) for verification is:\n\n" +
+                            "OTP: " + otp + "\n\n" +
+                            "This OTP is valid for 5 minutes only.\n" +
+                            "Please do not share this code with anyone for security reasons.\n\n" +
+                            "If you did not request this verification, please ignore this email.\n\n" +
+                            "Warm regards,\n" +
+                            "TheAdvue Qshopn Team\n" +
+                            "Secure. Reliable. Simple."
+            );
+        }
     }
 
     @Override
