@@ -54,7 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/me").authenticated()
 
                         // ADMIN ONLY
-                        .requestMatchers("/admin/**")
+                        .requestMatchers("/admin/**", "/api/admin/**")
                         .hasRole("ADMIN")
 
                         // SHOP / CLIENT ONLY

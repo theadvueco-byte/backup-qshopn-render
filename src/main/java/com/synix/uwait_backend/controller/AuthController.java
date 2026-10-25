@@ -77,16 +77,28 @@ public class AuthController {
     }
 
     @PostMapping("admin/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
+    public ResponseEntity<?> login(
+            @RequestBody Map<String, String> body,
+            HttpServletResponse httpResponse) {
         String email = body.get("email");
         String password = body.get("password");
 
         Admin admin = adminAuthService.loginAdmin(email, password);
         String token = jwtUtil.generateToken(admin.getEmail(), "ADMIN");
 
+        ResponseCookie cookie = ResponseCookie.from("token", token)
+                .httpOnly(true)
+                .secure(true) // 🔥 localhost -> true in production
+                .path("/")
+                .maxAge(60 * 60 * 24)
+                .sameSite("None") // 🔥 REQUIRED for cross-origin
+                .build();
+
+        httpResponse.setHeader("Set-Cookie", cookie.toString());
+
         return ResponseEntity.ok(Map.of(
                 "token", token,
-                "role",admin.getRole(),
+                "role", admin.getRole(),
                 "adminId", admin.getId(),
                 "email", admin.getEmail()
         ));
