@@ -55,16 +55,17 @@ public class JwtTokenValidator extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         try {
-            String jwt = extractTokenFromCookies(request);
-
-            if (jwt == null) {
-                String header = request.getHeader("Authorization");
-                if (header != null && header.startsWith("Bearer ")) {
-                    jwt = header.substring(7);
-                }
+            String jwt = null;
+            String header = request.getHeader("Authorization");
+            if (header != null && header.startsWith("Bearer ")) {
+                jwt = header.substring(7).trim();
             }
 
-            if (jwt != null) {
+            if (jwt == null || jwt.isBlank() || "null".equals(jwt)) {
+                jwt = extractTokenFromCookies(request);
+            }
+
+            if (jwt != null && !jwt.isBlank() && !"null".equals(jwt)) {
 
                 SecretKey key =
                         Keys.hmacShaKeyFor(JwtConstant.SECRET_KEY.getBytes());
@@ -112,7 +113,10 @@ public class JwtTokenValidator extends OncePerRequestFilter {
 
         for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
             if ("token".equals(cookie.getName())) {
-                return cookie.getValue();
+                String val = cookie.getValue();
+                if (val != null && !val.isBlank() && !"null".equals(val)) {
+                    return val;
+                }
             }
         }
         return null;

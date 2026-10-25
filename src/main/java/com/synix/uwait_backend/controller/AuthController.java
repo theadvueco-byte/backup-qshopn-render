@@ -52,13 +52,8 @@ public class AuthController {
 
         httpResponse.setHeader("Set-Cookie", cookie.toString());
 
-        // REMOVE token from response
-        return ResponseEntity.ok(new LoginResponse(
-                null,
-                response.getRole(),
-                response.getFullName(),
-                response.isOnboarding()
-        ));
+        // Return token in response body (and also set cookie)
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
